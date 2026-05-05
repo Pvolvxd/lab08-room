@@ -1,26 +1,31 @@
 package com.example.lab08.data
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.Query
-import androidx.room.Update
+import androidx.room.*
 
 @Dao
 interface TaskDao {
 
-    // Obtener todas las tareas
     @Query("SELECT * FROM tasks")
     suspend fun getAllTasks(): List<Task>
 
-    // Insertar una nueva tarea
     @Insert
     suspend fun insertTask(task: Task)
 
-    // Actualizar tarea
     @Update
     suspend fun updateTask(task: Task)
 
-    // Eliminar todas las tareas
+    @Delete
+    suspend fun deleteTask(task: Task)
+
     @Query("DELETE FROM tasks")
     suspend fun deleteAllTasks()
+
+    @Query("SELECT * FROM tasks WHERE is_completed = 0")
+    suspend fun getPendingTasks(): List<Task>
+
+    @Query("SELECT * FROM tasks WHERE is_completed = 1")
+    suspend fun getCompletedTasks(): List<Task>
+
+    @Query("SELECT * FROM tasks WHERE description LIKE '%' || :query || '%'")
+    suspend fun searchTasks(query: String): List<Task>
 }

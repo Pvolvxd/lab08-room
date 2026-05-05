@@ -1,6 +1,7 @@
 package com.example.lab08.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.lab08.data.Task
 import com.example.lab08.data.TaskDao
@@ -10,7 +11,6 @@ import kotlinx.coroutines.launch
 
 class TaskViewModel(private val dao: TaskDao) : ViewModel() {
 
-    // Lista de tareas
     private val _tasks = MutableStateFlow<List<Task>>(emptyList())
     val tasks: StateFlow<List<Task>> = _tasks
 
@@ -20,32 +20,51 @@ class TaskViewModel(private val dao: TaskDao) : ViewModel() {
         }
     }
 
-    // Agregar tarea
-    fun addTask(description: String) {
-        val newTask = Task(description = description)
-
+    fun addTask(description: String, priority: String = "medium") {
         viewModelScope.launch {
-            dao.insertTask(newTask)
+            dao.insertTask(Task(description = description, priority = priority))
             _tasks.value = dao.getAllTasks()
         }
     }
 
-    // Cambiar completado/no completado
     fun toggleTaskCompletion(task: Task) {
         viewModelScope.launch {
-            val updatedTask = task.copy(
-                isCompleted = !task.isCompleted
-            )
-            dao.updateTask(updatedTask)
+            dao.updateTask(task.copy(isCompleted = !task.isCompleted))
             _tasks.value = dao.getAllTasks()
         }
     }
 
-    // Eliminar todas
-    fun deleteAllTasks() {
+    fun deleteTask(task: Task) {
         viewModelScope.launch {
-            dao.deleteAllTasks()
-            _tasks.value = emptyList()
+            dao.deleteTask(task)
+            _tasks.value = dao.getAllTasks()
         }
+    }
+
+    fun filterTasks(filter: String) {
+        viewModelScope.launch {
+            _tasks.value = when (filter) {
+                "pending"   -> dao.getPendingTasks()
+                "completed" -> dao.getCompletedTasks()
+                else        -> dao.getAllTasks()
+            }
+        }
+    }
+
+    fun searchTasks(query: String) {
+        viewModelScope.launch {
+            _tasks.value = if (query.isBlank()) dao.getAllTasks()
+            else dao.searchTasks(query)
+        }
+    }
+}
+
+class TaskViewModelFactory(private val dao: TaskDao) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(TaskViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return TaskViewModel(dao) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
